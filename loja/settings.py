@@ -43,6 +43,8 @@ INSTALLED_APPS = [
     'produto',
     'pedido',
     'perfil',
+    'crispy_forms',
+    "crispy_bootstrap4",
 
     # TODO: Remover debug toolbar
     'debug_toolbar',
@@ -170,3 +172,8 @@ INTERNAL_IPS = [
     "127.0.0.1",
     # ...
 ]
+
+
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap4"
+
+CRISPY_TEMPLATE_PACK = "bootstrap4"

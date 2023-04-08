@@ -1,15 +1,13 @@
-from pprint import pprint
-
 from django.contrib import messages
-from django.shortcuts import HttpResponse, get_object_or_404, redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views import View
 from django.views.generic.detail import DetailView
 from django.views.generic.list import ListView
 
-from . import models
+from perfil.models import Perfil
 
-# Create your views here.
+from . import models
 
 
 class ListaProdutos(ListView):
@@ -28,13 +26,6 @@ class DetalheProdutos(DetailView):
 
 class AdicionarAoCarinho(View):
     def get(self, *args, **kwargs):
-
-        # TODO: deletar linhas apaga carinho
-        # if self.request.session.get('carrinho'):
-        #     del self.request.session['carrinho']
-        #     self.request.session.save()
-        #     print('Carrinho Deletado!!!!!')
-
         http_referer = self.request.META.get(
             'HTTP_REFERER',
             reverse('produto:lista')
@@ -82,17 +73,17 @@ class AdicionarAoCarinho(View):
             if variacao_estoque < quantidade_carrinho:
                 messages.warning(
                     self.request,
-                    f'Estoque insuficiente para {quantidade_carrinho}x no produto'
-                    f'produto "{produto_nome}". adicionamos {variacao_estoque}x '
-                    f'"{produto_nome}" no seu carrinho.'
+                    f'Estoque insuficiente para {quantidade_carrinho}x no'
+                    f'produto "{produto_nome}". adicionamos {variacao_estoque}'
+                    f'x "{produto_nome}" no seu carrinho.'
                 )
                 quantidade_carrinho = variacao_estoque
 
             carrinho[variacao_id]['quantidade'] = quantidade_carrinho
             carrinho[variacao_id]['preco_quantitativo'] = preco_unitario * \
                 quantidade_carrinho
-            carrinho[variacao_id]['preco_quantitativo_promocional'] = preco_unitario_promocional * \
-                quantidade_carrinho
+            carrinho[variacao_id]['preco_quantitativo_promocional'] = \
+                preco_unitario_promocional * quantidade_carrinho
 
         else:
             carrinho[variacao_id] = {
@@ -157,7 +148,30 @@ class Carrinho(View):
         return render(self.request, 'produto/carrinho.html', contexto)
 
 
-class Finalizar(View):
+class ResumoDaCompra(View):
     def get(self, *args, **kwargs):
-        return HttpResponse('Finalizar')
-        return HttpResponse('Finalizar')
+        if not self.request.user.is_authenticated:
+            messages.warning(
+                self.request, "Efetue o login para finalizar a compra")
+            return redirect('perfil:criar')
+
+        perfil = Perfil.objects.filter(usuario=self.request.user)
+
+        if not perfil.exists():
+            messages.error(
+                self.request, "Complete o cadastro do perfil para efetua a compra")
+            return redirect('perfil:criar')
+
+        if not self.request.session.get('carrinho'):
+            messages.error(
+                self.request, "Seu carrinho esta vazio")
+            return redirect('produto:lista')
+
+        contexto = {
+            'carrinho': self.request.session.get('carrinho'),
+            'usuario': self.request.user,
+            'perfil': perfil.first()
+
+        }
+
+        return render(self.request, 'produto/resumodacompra.html', contexto)
