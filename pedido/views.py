@@ -1,6 +1,8 @@
 from django.contrib import messages
 from django.shortcuts import HttpResponse, redirect, render
+from django.urls import reverse
 from django.views import View
+from django.views.generic import DetailView
 from django.views.generic.list import ListView
 
 from produto.models import Variacao
@@ -9,8 +11,28 @@ from utils import utils
 from .models import ItemPedido, Pedido
 
 
-class Pagar(View):
+class DispathLoginRequired(View):
+    def dispatch(self, *args, **kwargs):
+        if not self.request.user.is_authenticated:
+            messages.warning(self.request, 'Pagina não encontrada.')
+            return redirect('perfil:criar')
+
+        return super().dispatch(*args, **kwargs)
+
+
+class Pagar(DispathLoginRequired, DetailView):
     template_name = 'pedido/pagar.html'
+    model = Pedido
+    pk_url_kwarg = 'pk'
+    context_object_name = 'pedido'
+
+    def get_queryset(self, *args, **kwargs):
+        qs = super().get_queryset()
+        qs = qs.filter(usuario=self.request.user)
+        return qs
+
+
+class SalvarPedido(View):
 
     def get(self, *args, **kwargs):
         if not self.request.user.is_authenticated:
@@ -92,18 +114,14 @@ class Pagar(View):
 
         del self.request.session['carrinho']
 
-        return redirect('pedido:lista')
-
-
-class SalvarPedido(View):
-    def get(self, *args, **kwargs):
-        return HttpResponse('FecharPedido')
+        return redirect(reverse('pedido:pagar', kwargs={'pk': pedido.pk}))
 
 
 class Detalhe(View):
     def get(self, *args, **kwargs):
         return HttpResponse('Detalhe')
-    
+
+
 class Lista(View):
     def get(self, *args, **kwargs):
         return HttpResponse('Lista')
